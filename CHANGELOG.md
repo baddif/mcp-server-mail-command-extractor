@@ -5,6 +5,30 @@ All notable changes to Mail Command Extractor MCP Server will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-12
+
+### 🆕 Added
+- **sender_email字段支持**: 新增精确邮件地址匹配机制
+- **精确匹配功能**: 避免模糊匹配可能产生的误匹配
+- **降级处理机制**: 缺失sender_email时自动从sender字段解析
+- **专门测试套件**: test_sender_email_feature.py验证新功能
+- **真实数据验证**: 支持gmail_check_output格式的sender_email字段
+
+### 🔧 Improved
+- **Schema增强**: 邮件列表Schema新增sender_email字段描述
+- **匹配精度**: sender规则现在进行精确匹配而非模糊匹配
+- **向后兼容**: 完全兼容没有sender_email字段的旧数据格式
+- **错误处理**: 增强邮件地址解析的鲁棒性
+
+### 🐛 Fixed
+- **匹配准确性**: 解决sender字段模糊匹配可能的误判问题
+- **数据完整性**: 确保匹配结果包含完整的sender_email信息
+
+### 📚 Documentation
+- **测试用例**: 完整的sender_email功能测试和验证
+- **使用说明**: 新字段的使用指南和最佳实践
+- **Schema文档**: 更新API文档说明精确匹配行为
+
 ## [1.1.0] - 2026-02-12
 
 ### 🆕 Added

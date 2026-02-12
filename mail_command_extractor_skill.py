@@ -61,7 +61,7 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                                         "properties": {
                                             "sender": {
                                                 "type": "string",
-                                                "description": "邮件发送者地址（支持模糊匹配）"
+                                                "description": "邮件发送者地址（与sender_email字段进行精确匹配）"
                                             },
                                             "subjects": {
                                                 "type": "array",
@@ -129,14 +129,15 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                                     "items": {
                                         "type": "object",
                                         "properties": {
-                                            "sender": {"type": "string"},
+                                            "sender": {"type": "string", "description": "发件人显示名称"},
+                                            "sender_email": {"type": "string", "description": "发件人邮箱地址（用于精确匹配）"},
                                             "subject": {"type": "string"},
                                             "content": {"type": "string"},
                                             "date_received": {"type": "string"},
                                             "message_id": {"type": "string"},
                                             "email_id": {"type": "string"}
                                         },
-                                        "required": ["sender", "subject", "content"]
+                                        "required": ["sender", "sender_email", "subject", "content"]
                                     }
                                 }
                             },
@@ -246,15 +247,17 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
         
         for email in emails:
             sender = email.get("sender", "")
+            sender_email = email.get("sender_email", "")
             subject = email.get("subject", "")
             content = email.get("content", "")
             
-            # 提取发件人邮箱地址
-            sender_email = self._extract_email_address(sender)
+            # 如果没有提供sender_email，从sender字段中提取
+            if not sender_email:
+                sender_email = self._extract_email_address(sender)
             
             for rule_index, rule in enumerate(rules):
-                # 检查发件人匹配
-                if not self._matches_sender(sender_email, rule["sender"]):
+                # 检查发件人匹配 - 使用sender_email字段进行精确匹配
+                if not self._matches_sender_exact(sender_email, rule["sender"]):
                     continue
                 
                 # 检查标题和内容匹配
@@ -272,6 +275,7 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                                     "matched_email": {
                                         "email_id": email.get("email_id"),
                                         "sender": sender,
+                                        "sender_email": sender_email,
                                         "subject": subject,
                                         "content": content,
                                         "date_received": email.get("date_received"),
@@ -303,8 +307,12 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
         return sender_field.strip()
     
     def _matches_sender(self, email_address: str, pattern: str) -> bool:
-        """检查发件人是否匹配"""
+        """检查发件人是否匹配（模糊匹配）"""
         return pattern.lower() in email_address.lower()
+    
+    def _matches_sender_exact(self, email_address: str, pattern: str) -> bool:
+        """检查发件人是否匹配（精确匹配）"""
+        return email_address.lower() == pattern.lower()
     
     def _matches_pattern(self, text: str, pattern: str) -> bool:
         """检查文本是否匹配模式（模糊匹配）"""

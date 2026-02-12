@@ -64,7 +64,8 @@ def test_basic_extraction():
         "email_list": {
             "matched_emails": [
                 {
-                    "sender": "=?UTF-8?B?5LiB5LiA5aSr?= <baddif@gmail.com>",
+                    "sender": "=?UTF-8?B?5LiB5LiE5aSr?= <baddif@gmail.com>",
+                    "sender_email": "baddif@gmail.com",
                     "subject": "日报",
                     "content": "生成日报",
                     "date_received": "Thu, 12 Feb 2026 15:20:17 +0800",
@@ -131,6 +132,7 @@ def test_multiple_rules():
             "matched_emails": [
                 {
                     "sender": "Test User <baddif@gmail.com>",
+                    "sender_email": "baddif@gmail.com",
                     "subject": "报告请求",
                     "content": "请生成日报和周报",
                     "date_received": "2026-02-12T15:20:17+08:00",
@@ -186,6 +188,7 @@ def test_duplicate_merging():
             "matched_emails": [
                 {
                     "sender": "user@gmail.com",
+                    "sender_email": "user@gmail.com",
                     "subject": "任务1",
                     "content": "需要处理",
                     "email_id": "email-1",
@@ -193,6 +196,7 @@ def test_duplicate_merging():
                 },
                 {
                     "sender": "user@gmail.com", 
+                    "sender_email": "user@gmail.com",
                     "subject": "任务2",
                     "content": "需要处理",
                     "email_id": "email-2",
@@ -248,6 +252,7 @@ def test_no_merging():
             "matched_emails": [
                 {
                     "sender": "user@gmail.com",
+                    "sender_email": "user@gmail.com",
                     "subject": "任务1",
                     "content": "需要处理",
                     "email_id": "email-1",
@@ -255,6 +260,7 @@ def test_no_merging():
                 },
                 {
                     "sender": "user@gmail.com",
+                    "sender_email": "user@gmail.com",
                     "subject": "任务2", 
                     "content": "需要处理",
                     "email_id": "email-2",
