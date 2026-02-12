@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "function_name": "gmail_check",
+  "data": {
+    "matched_emails": [
+      {
+        "sender": "=?UTF-8?B?5LiB5LiA5aSr?= <baddif@gmail.com>",
+        "subject": "日报",
+        "content": "生成日报",
+        "date_received": "Thu, 12 Feb 2026 15:20:17 +0800",
+        "message_id": "<CADg8Hs+csR-gCkZLTw_jUynAK4HHbEXwJFit3MLtKOFOL3D98w@mail.gmail.com>",
+        "matched_sender_filter": "baddif@gmail.com",
+        "matched_subject_filters": [
+          "日报"
+        ],
+        "email_id": "42e4e831f7f44713b34e82ea7dc5ad0f"
+      }
+    ],
+    "check_time": "2026-02-12T07:23:19.468949+00:00",
+    "total_matched": 1,
+    "background_mode": false
+  },
+  "statistics": {
+    "emails_checked": 1,
+    "cache_size": 8,
+    "filters_applied": 2
+  }
+}

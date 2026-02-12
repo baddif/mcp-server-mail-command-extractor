@@ -1,0 +1,131 @@
+{
+  "detection_rules": {
+    "rules": [
+      {
+        "sender": "baddif@gmail.com",
+        "subjects": [
+          {
+            "title_pattern": "日报",
+            "content_rules": [
+              {
+                "content_pattern": "生成日报",
+                "action": {
+                  "command": "generate_daily_report",
+                  "parameters": {
+                    "type": "daily",
+                    "language": "Chinese"
+                  },
+                  "priority": 10
+                }
+              },
+              {
+                "content_pattern": "今日汇总",
+                "action": {
+                  "command": "generate_daily_summary",
+                  "parameters": {
+                    "type": "summary",
+                    "language": "Chinese"
+                  },
+                  "priority": 15
+                }
+              }
+            ]
+          },
+          {
+            "title_pattern": "周报",
+            "content_rules": [
+              {
+                "content_pattern": "生成周报",
+                "action": {
+                  "command": "generate_weekly_report",
+                  "parameters": {
+                    "type": "weekly",
+                    "language": "Chinese"
+                  },
+                  "priority": 20
+                }
+              }
+            ]
+          },
+          {
+            "title_pattern": "月报",
+            "content_rules": [
+              {
+                "content_pattern": "生成月报",
+                "action": {
+                  "command": "generate_monthly_report",
+                  "parameters": {
+                    "type": "monthly",
+                    "language": "Chinese"
+                  },
+                  "priority": 30
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "sender": "@company.com",
+        "subjects": [
+          {
+            "title_pattern": "通知",
+            "content_rules": [
+              {
+                "content_pattern": "会议",
+                "action": {
+                  "command": "schedule_meeting",
+                  "parameters": {
+                    "type": "meeting",
+                    "source": "email"
+                  },
+                  "priority": 5
+                }
+              },
+              {
+                "content_pattern": "任务",
+                "action": {
+                  "command": "create_task",
+                  "parameters": {
+                    "type": "task",
+                    "source": "email"
+                  },
+                  "priority": 8
+                }
+              }
+            ]
+          },
+          {
+            "title_pattern": "紧急",
+            "content_rules": [
+              {
+                "content_pattern": "处理",
+                "action": {
+                  "command": "urgent_alert",
+                  "parameters": {
+                    "priority": "high",
+                    "type": "urgent"
+                  },
+                  "priority": 1
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "email_list": {
+    "matched_emails": [
+      {
+        "sender": "=?UTF-8?B?5LiB5LiA5aSr?= <baddif@gmail.com>",
+        "subject": "日报",
+        "content": "生成日报",
+        "date_received": "Thu, 12 Feb 2026 15:20:17 +0800",
+        "message_id": "<CADg8Hs+csR-gCkZLTw_jUynAK4HHbEXwJFit3MLtKOFOL3D98w@mail.gmail.com>",
+        "email_id": "42e4e831f7f44713b34e82ea7dc5ad0f"
+      }
+    ]
+  },
+  "merge_duplicates": true
+}
