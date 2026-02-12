@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Current version information
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __release_date__ = "2026-02-12"
 __compatibility_version__ = "2024-11-05"  # MCP protocol version
 
@@ -32,7 +32,10 @@ VERSION_INFO = {
         "Duplicate Command Merging",
         "MCP Protocol Support",
         "Multi-rule Processing",
-        "Context-aware Processing"
+        "Context-aware Processing",
+        "Time-based Command Merging",
+        "Empty Input Handling",
+        "Enhanced Date Parsing"
     ]
 }
 

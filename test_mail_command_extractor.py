@@ -188,13 +188,15 @@ def test_duplicate_merging():
                     "sender": "user@gmail.com",
                     "subject": "任务1",
                     "content": "需要处理",
-                    "email_id": "email-1"
+                    "email_id": "email-1",
+                    "date_received": "2026-02-12T10:00:00Z"
                 },
                 {
                     "sender": "user@gmail.com", 
                     "subject": "任务2",
                     "content": "需要处理",
-                    "email_id": "email-2"
+                    "email_id": "email-2",
+                    "date_received": "2026-02-12T09:00:00Z"
                 }
             ]
         },
@@ -248,13 +250,15 @@ def test_no_merging():
                     "sender": "user@gmail.com",
                     "subject": "任务1",
                     "content": "需要处理",
-                    "email_id": "email-1"
+                    "email_id": "email-1",
+                    "date_received": "2026-02-12T10:00:00Z"
                 },
                 {
                     "sender": "user@gmail.com",
                     "subject": "任务2", 
                     "content": "需要处理",
-                    "email_id": "email-2"
+                    "email_id": "email-2",
+                    "date_received": "2026-02-12T09:00:00Z"
                 }
             ]
         },

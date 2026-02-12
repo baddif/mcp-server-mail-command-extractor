@@ -173,53 +173,45 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
             email_list = kwargs.get("email_list", {})
             merge_duplicates = kwargs.get("merge_duplicates", True)
             
-            # 验证输入参数
-            if "rules" not in detection_rules:
-                return {
-                    "success": False,
-                    "function_name": "mail_command_extractor",
-                    "error": {
-                        "message": "detection_rules.rules is required",
-                        "type": "validation_error"
-                    }
-                }
+            # 处理空邮件列表或空命令检测模板的情况
+            emails = email_list.get("matched_emails", [])
+            rules = detection_rules.get("rules", [])
             
-            # 处理空邮件列表或空规则的情况
-            if not email_list.get("matched_emails") or not detection_rules.get("rules"):
+            # 如果输入的邮件列表为空或者命令检测模板为空，则返回空命令列表
+            if not emails or not rules:
                 return {
                     "success": True,
                     "function_name": "mail_command_extractor",
                     "data": {
                         "extracted_commands": [],
-                        "processed_emails": len(email_list.get("matched_emails", [])),
+                        "processed_emails": len(emails),
                         "matched_emails": 0,
                         "total_commands": 0,
-                        "processing_time": datetime.utcnow().isoformat() + "Z"
+                        "processing_time": datetime.utcnow().isoformat() + "Z",
+                        "empty_input_reason": "Empty email list" if not emails else "Empty detection rules"
                     },
                     "statistics": {
-                        "rules_processed": len(detection_rules.get("rules", [])),
-                        "emails_processed": len(email_list.get("matched_emails", [])),
+                        "rules_processed": len(rules),
+                        "emails_processed": len(emails),
                         "commands_generated": 0
                     }
                 }
             
             # 提取命令
-            extracted_commands = self._extract_commands(
-                detection_rules["rules"], 
-                email_list["matched_emails"]
-            )
+            extracted_commands = self._extract_commands(rules, emails)
             
-            # 合并重复命令
+            # 如果解析成功则返回解析出的所有命令列表
             if merge_duplicates:
+                # 按时间由近到远进行同命令合并，不重复执行
                 extracted_commands = self._merge_duplicate_commands(extracted_commands)
             
-            # 按优先级排序
-            extracted_commands = self._sort_by_priority(extracted_commands)
+            # 按优先级和时间排序
+            extracted_commands = self._sort_by_priority_and_time(extracted_commands)
             
             result = {
                 "extracted_commands": extracted_commands,
-                "processed_emails": len(email_list["matched_emails"]),
-                "matched_emails": len([cmd for cmd in extracted_commands if cmd.get("matched_emails")]),
+                "processed_emails": len(emails),
+                "matched_emails": len([cmd for cmd in extracted_commands if cmd.get("matched_emails", cmd.get("matched_email"))]),
                 "total_commands": len(extracted_commands),
                 "processing_time": datetime.utcnow().isoformat() + "Z"
             }
@@ -232,8 +224,8 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                 "function_name": "mail_command_extractor",
                 "data": result,
                 "statistics": {
-                    "rules_processed": len(detection_rules["rules"]),
-                    "emails_processed": len(email_list["matched_emails"]),
+                    "rules_processed": len(rules),
+                    "emails_processed": len(emails),
                     "commands_generated": len(extracted_commands)
                 }
             }
@@ -319,29 +311,98 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
         return pattern.lower() in text.lower()
     
     def _merge_duplicate_commands(self, commands: List[Dict]) -> List[Dict]:
-        """合并重复的命令"""
+        """
+        按时间由近到远进行同命令合并，不重复执行
+        相同命令（command + parameters）只保留一个，以最新的邮件时间为准
+        """
+        from datetime import datetime
+        
         command_map = {}
         
         for cmd in commands:
             # 创建命令的唯一标识
             cmd_key = self._get_command_key(cmd)
             
+            # 获取邮件时间
+            email_date = self._parse_email_date(cmd["matched_email"].get("date_received", ""))
+            
             if cmd_key in command_map:
-                # 合并邮件信息
+                # 比较时间，保留最新的命令
                 existing_cmd = command_map[cmd_key]
-                if "matched_emails" not in existing_cmd:
-                    existing_cmd["matched_emails"] = [existing_cmd.pop("matched_email")]
-                existing_cmd["matched_emails"].append(cmd["matched_email"])
+                existing_date = self._parse_email_date(existing_cmd["matched_emails"][0].get("date_received", ""))
                 
-                # 保留较高的优先级（较小的数字）
-                existing_cmd["priority"] = min(existing_cmd["priority"], cmd["priority"])
-                existing_cmd["rule_index"] = min(existing_cmd["rule_index"], cmd["rule_index"])
+                # 如果当前邮件更新，替换命令；否则只添加到邮件列表
+                if email_date > existing_date:
+                    # 用更新的命令替换，但保留所有匹配的邮件
+                    all_emails = existing_cmd["matched_emails"] + [cmd["matched_email"]]
+                    cmd["matched_emails"] = sorted(all_emails, 
+                                                 key=lambda x: self._parse_email_date(x.get("date_received", "")), 
+                                                 reverse=True)  # 按时间降序排列（最新在前）
+                    command_map[cmd_key] = cmd
+                else:
+                    # 添加邮件到现有命令
+                    existing_cmd["matched_emails"].append(cmd["matched_email"])
+                    # 重新排序邮件列表
+                    existing_cmd["matched_emails"] = sorted(existing_cmd["matched_emails"],
+                                                          key=lambda x: self._parse_email_date(x.get("date_received", "")),
+                                                          reverse=True)  # 按时间降序排列（最新在前）
             else:
-                # 重命名单个邮件为邮件列表
+                # 新命令，转换为邮件列表格式
                 cmd["matched_emails"] = [cmd.pop("matched_email")]
                 command_map[cmd_key] = cmd
         
         return list(command_map.values())
+    
+    def _parse_email_date(self, date_str: str) -> datetime:
+        """解析邮件日期字符串，使用标准库"""
+        from datetime import datetime
+        import re
+        
+        if not date_str:
+            return datetime.min.replace(year=1900)  # 使用安全的最小年份
+        
+        # 尝试多种日期格式
+        date_formats = [
+            "%Y-%m-%dT%H:%M:%SZ",           # ISO format with Z
+            "%Y-%m-%dT%H:%M:%S.%fZ",        # ISO format with microseconds and Z
+            "%Y-%m-%dT%H:%M:%S",            # ISO format without Z
+            "%Y-%m-%d %H:%M:%S",            # Standard format
+            "%a, %d %b %Y %H:%M:%S %z",     # RFC 2822 format
+            "%a, %d %b %Y %H:%M:%S",        # RFC 2822 without timezone
+        ]
+        
+        # 清理日期字符串
+        clean_date = date_str.strip()
+        
+        # 移除常见的时区标识符
+        clean_date = re.sub(r'\s*\([^)]+\)$', '', clean_date)  # 移除 (UTC) 等
+        clean_date = re.sub(r'\s+(GMT|UTC|EST|PST|CST|MST)$', '', clean_date)  # 移除时区缩写
+        
+        for fmt in date_formats:
+            try:
+                parsed_date = datetime.strptime(clean_date, fmt)
+                # 确保年份在合理范围内
+                if parsed_date.year < 1900 or parsed_date.year > 2100:
+                    continue
+                return parsed_date
+            except ValueError:
+                continue
+        
+        # 如果所有格式都失败，尝试简单的ISO格式解析
+        try:
+            # 移除时区信息并解析
+            if 'T' in clean_date:
+                date_part = clean_date.split('T')[0]
+                time_part = clean_date.split('T')[1].split('+')[0].split('-')[0].split('Z')[0]
+                datetime_str = f"{date_part}T{time_part}"
+                parsed_date = datetime.fromisoformat(datetime_str.replace('Z', ''))
+                # 确保年份在合理范围内
+                if parsed_date.year >= 1900 and parsed_date.year <= 2100:
+                    return parsed_date
+        except:
+            pass
+        
+        return datetime.min.replace(year=1900)  # 使用安全的最小年份
     
     def _get_command_key(self, command: Dict) -> str:
         """生成命令的唯一标识"""
@@ -353,6 +414,32 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
     def _sort_by_priority(self, commands: List[Dict]) -> List[Dict]:
         """按优先级排序命令"""
         return sorted(commands, key=lambda x: (x["priority"], x["rule_index"]))
+    
+    def _sort_by_priority_and_time(self, commands: List[Dict]) -> List[Dict]:
+        """按优先级和时间排序命令（优先级优先，然后按最新邮件时间）"""
+        from datetime import datetime
+        
+        def sort_key(cmd):
+            # 获取最新邮件时间
+            if "matched_emails" in cmd and cmd["matched_emails"]:
+                latest_date = max(self._parse_email_date(email.get("date_received", "")) 
+                                for email in cmd["matched_emails"])
+            elif "matched_email" in cmd:
+                latest_date = self._parse_email_date(cmd["matched_email"].get("date_received", ""))
+            else:
+                latest_date = datetime.min.replace(year=1900)  # 使用安全的最小年份
+            
+            # 返回排序键：(优先级, 规则索引, -时间戳) 
+            # 负时间戳确保最新的邮件排在前面
+            try:
+                time_value = -latest_date.timestamp()
+            except (OSError, ValueError):
+                # 如果timestamp()失败，使用替代方法
+                time_value = -(latest_date.year * 10000 + latest_date.month * 100 + latest_date.day)
+            
+            return (cmd["priority"], cmd["rule_index"], time_value)
+        
+        return sorted(commands, key=sort_key)
     
     def get_mcp_resources(self) -> List[McpResource]:
         """定义MCP资源"""

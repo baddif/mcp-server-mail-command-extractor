@@ -1,5 +1,39 @@
 # Changelog
 
+All notable changes to Mail Command Extractor MCP Server will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2026-02-12
+
+### 🆕 Added
+- Enhanced empty input handling with clear reason reporting
+- Time-based command merging to avoid duplicate execution
+- Advanced date parsing supporting multiple formats and timezones
+- Safe error handling for edge cases in date processing
+- Empty input reason tracking in API responses
+
+### 🔧 Improved
+- Command merging now sorts by time (newest first)
+- Enhanced duplicate detection based on command + parameters
+- Robust date parsing with fallback mechanisms
+- Better error handling for year boundary issues
+- Improved sorting algorithm with time prioritization
+
+### 🐛 Fixed
+- Fixed "year 0 is out of range" error in date parsing
+- Resolved timestamp calculation issues for edge cases
+- Corrected empty list handling in command processing
+- Fixed timezone parsing edge cases
+
+### 📚 Documentation
+- Updated SKILL_GENERATION_RULES.md with version control standards (v2.1.0)
+- Enhanced code comments for date handling functions
+- Improved test coverage documentation
+
+## [1.0.0] - 2026-02-12log
+
 All notable changes to the Mail Command Extractor MCP Server project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
