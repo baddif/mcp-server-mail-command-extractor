@@ -5,6 +5,30 @@ All notable changes to Mail Command Extractor MCP Server will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-13
+
+### 🚀 Major Changes
+- **简化输入格式**: 直接接收邮件数组，不再需要包装结构
+- **优化Schema设计**: 更清晰的参数定义，符合OpenAI Function Calling规范
+- **增强匹配逻辑**: sender_email精确匹配 + 标题内容模糊匹配
+
+### 🆕 Added
+- **直接邮件数组输入**: `emails`参数直接接收matched_emails数组内容
+- **简化规则格式**: 规则定义更简洁，subjects和contents为字符串数组
+- **模糊关键词匹配**: 标题和内容支持多关键词模糊匹配
+- **增强测试套件**: 完整验证新输入格式和匹配逻辑
+
+### 🔧 Improved
+- **Schema优化**: 参数结构更清晰，类型定义更准确
+- **匹配效率**: 简化的匹配逻辑，更好的性能
+- **错误处理**: 更好的空值和边界情况处理
+- **代码可读性**: 更清晰的匹配逻辑实现
+
+### 🛠️ Technical
+- **输入验证**: 直接验证邮件数组格式
+- **命令合并**: 优化重复命令合并逻辑
+- **调试支持**: 增强的匹配详情输出
+
 ## [1.2.0] - 2026-02-12
 
 ### 🆕 Added

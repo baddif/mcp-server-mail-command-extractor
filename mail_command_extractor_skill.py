@@ -45,10 +45,45 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
             "type": "function",
             "function": {
                 "name": "mail_command_extractor",
-                "description": "检测邮件内容并根据预定义规则生成相应命令。支持邮件来源、标题、内容的模糊匹配，自动合并重复命令并按优先级排序。",
+                "description": "检测邮件内容并根据预定义规则生成相应命令。输入是邮件数组和检测规则，支持sender_email精确匹配，标题和内容模糊匹配。",
                 "parameters": {
                     "type": "object",
                     "properties": {
+                        "emails": {
+                            "type": "array",
+                            "description": "邮件列表数组，直接传入gmail_check输出中的matched_emails字段内容",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "sender": {
+                                        "type": "string", 
+                                        "description": "邮件发送者显示名称，格式如：用户名 <email@example.com>"
+                                    },
+                                    "sender_email": {
+                                        "type": "string", 
+                                        "description": "邮件发送者的精确邮箱地址，用于与规则中的sender字段进行精确匹配"
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "description": "邮件主题"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "description": "邮件正文内容"
+                                    },
+                                    "date_received": {
+                                        "type": "string",
+                                        "description": "邮件接收时间"
+                                    },
+                                    "email_id": {
+                                        "type": "string",
+                                        "description": "邮件唯一标识符"
+                                    }
+                                },
+                                "required": ["sender", "sender_email", "subject", "content", "date_received", "email_id"]
+                            },
+                            "minItems": 0
+                        },
                         "detection_rules": {
                             "type": "object",
                             "description": "邮件检测规则配置。包含邮件来源、标题匹配规则和对应的动作命令。",
@@ -61,87 +96,44 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                                         "properties": {
                                             "sender": {
                                                 "type": "string",
-                                                "description": "邮件发送者地址（与sender_email字段进行精确匹配）"
+                                                "description": "邮件发送者地址（与emails中的sender_email字段进行精确匹配，不区分大小写）"
                                             },
                                             "subjects": {
                                                 "type": "array",
-                                                "description": "标题匹配规则数组",
+                                                "description": "标题关键词数组，模糊匹配（只要邮件主题包含任一关键词即匹配）",
                                                 "items": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "title_pattern": {
-                                                            "type": "string",
-                                                            "description": "标题匹配模式（包含关键词即可）"
-                                                        },
-                                                        "content_rules": {
-                                                            "type": "array",
-                                                            "description": "内容语句检测规则",
-                                                            "items": {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "content_pattern": {
-                                                                        "type": "string",
-                                                                        "description": "内容匹配模式（包含关键词即可）"
-                                                                    },
-                                                                    "action": {
-                                                                        "type": "object",
-                                                                        "description": "匹配后执行的动作",
-                                                                        "properties": {
-                                                                            "command": {
-                                                                                "type": "string",
-                                                                                "description": "命令名称"
-                                                                            },
-                                                                            "parameters": {
-                                                                                "type": "object",
-                                                                                "description": "命令参数",
-                                                                                "additionalProperties": True
-                                                                            },
-                                                                            "priority": {
-                                                                                "type": "integer",
-                                                                                "description": "命令优先级（数字越小优先级越高）",
-                                                                                "default": 100
-                                                                            }
-                                                                        },
-                                                                        "required": ["command"]
-                                                                    }
-                                                                },
-                                                                "required": ["content_pattern", "action"]
-                                                            }
-                                                        }
-                                                    },
-                                                    "required": ["title_pattern", "content_rules"]
+                                                    "type": "string",
+                                                    "description": "标题关键词"
                                                 }
+                                            },
+                                            "contents": {
+                                                "type": "array", 
+                                                "description": "内容关键词数组，模糊匹配（只要邮件内容包含任一关键词即匹配）",
+                                                "items": {
+                                                    "type": "string",
+                                                    "description": "内容关键词"
+                                                }
+                                            },
+                                            "action": {
+                                                "type": "string",
+                                                "description": "匹配后执行的命令名称"
+                                            },
+                                            "parameters": {
+                                                "type": "object",
+                                                "description": "命令参数",
+                                                "additionalProperties": True
+                                            },
+                                            "priority": {
+                                                "type": "integer",
+                                                "description": "命令优先级（数字越小优先级越高）",
+                                                "default": 100
                                             }
                                         },
-                                        "required": ["sender", "subjects"]
+                                        "required": ["sender", "action"]
                                     }
                                 }
                             },
                             "required": ["rules"]
-                        },
-                        "email_list": {
-                            "type": "object",
-                            "description": "要检测的邮件列表，使用gmail_check输出的格式",
-                            "properties": {
-                                "matched_emails": {
-                                    "type": "array",
-                                    "description": "邮件数组",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "sender": {"type": "string", "description": "发件人显示名称"},
-                                            "sender_email": {"type": "string", "description": "发件人邮箱地址（用于精确匹配）"},
-                                            "subject": {"type": "string"},
-                                            "content": {"type": "string"},
-                                            "date_received": {"type": "string"},
-                                            "message_id": {"type": "string"},
-                                            "email_id": {"type": "string"}
-                                        },
-                                        "required": ["sender", "sender_email", "subject", "content"]
-                                    }
-                                }
-                            },
-                            "required": ["matched_emails"]
                         },
                         "merge_duplicates": {
                             "type": "boolean",
@@ -149,7 +141,7 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                             "default": True
                         }
                     },
-                    "required": ["detection_rules", "email_list"]
+                    "required": ["emails", "detection_rules"]
                 }
             }
         }
@@ -164,18 +156,17 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
         
         Args:
             ctx: 执行上下文
-            **kwargs: 技能参数
+            **kwargs: 包含emails（邮件数组）、detection_rules（检测规则）、merge_duplicates（是否合并重复命令）
             
         Returns:
             包含提取的命令列表的结果
         """
         try:
+            # 新的输入格式：直接接收邮件数组
+            emails = kwargs.get("emails", [])
             detection_rules = kwargs.get("detection_rules", {})
-            email_list = kwargs.get("email_list", {})
             merge_duplicates = kwargs.get("merge_duplicates", True)
             
-            # 处理空邮件列表或空命令检测模板的情况
-            emails = email_list.get("matched_emails", [])
             rules = detection_rules.get("rules", [])
             
             # 如果输入的邮件列表为空或者命令检测模板为空，则返回空命令列表
@@ -260,34 +251,61 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                 if not self._matches_sender_exact(sender_email, rule["sender"]):
                     continue
                 
-                # 检查标题和内容匹配
-                for subject_rule in rule["subjects"]:
-                    if self._matches_pattern(subject, subject_rule["title_pattern"]):
-                        # 检查内容规则
-                        for content_rule in subject_rule["content_rules"]:
-                            if self._matches_pattern(content, content_rule["content_pattern"]):
-                                # 创建命令
-                                command = {
-                                    "command": content_rule["action"]["command"],
-                                    "parameters": content_rule["action"].get("parameters", {}),
-                                    "priority": content_rule["action"].get("priority", 100),
-                                    "rule_index": rule_index,
-                                    "matched_email": {
-                                        "email_id": email.get("email_id"),
-                                        "sender": sender,
-                                        "sender_email": sender_email,
-                                        "subject": subject,
-                                        "content": content,
-                                        "date_received": email.get("date_received"),
-                                        "message_id": email.get("message_id")
-                                    },
-                                    "matching_details": {
-                                        "sender_pattern": rule["sender"],
-                                        "title_pattern": subject_rule["title_pattern"],
-                                        "content_pattern": content_rule["content_pattern"]
-                                    }
-                                }
-                                extracted_commands.append(command)
+                # 检查标题匹配 - 模糊匹配（只要包含关键词即可）
+                subjects_matched = False
+                matched_subject_keywords = []
+                
+                subject_keywords = rule.get("subjects", [])
+                if not subject_keywords:  # 如果没有标题规则，默认匹配
+                    subjects_matched = True
+                else:
+                    for keyword in subject_keywords:
+                        if keyword.lower() in subject.lower():
+                            subjects_matched = True
+                            matched_subject_keywords.append(keyword)
+                
+                if not subjects_matched:
+                    continue
+                
+                # 检查内容匹配 - 模糊匹配（只要包含关键词即可）
+                contents_matched = False
+                matched_content_keywords = []
+                
+                content_keywords = rule.get("contents", [])
+                if not content_keywords:  # 如果没有内容规则，默认匹配
+                    contents_matched = True
+                else:
+                    for keyword in content_keywords:
+                        if keyword.lower() in content.lower():
+                            contents_matched = True
+                            matched_content_keywords.append(keyword)
+                
+                if not contents_matched:
+                    continue
+                
+                # 创建命令
+                command = {
+                    "command": rule["action"],
+                    "parameters": rule.get("parameters", {}),
+                    "priority": rule.get("priority", 100),
+                    "rule_index": rule_index,
+                    "matched_email": {
+                        "email_id": email.get("email_id"),
+                        "sender": sender,
+                        "sender_email": sender_email,
+                        "subject": subject,
+                        "content": content,
+                        "date_received": email.get("date_received"),
+                        "message_id": email.get("message_id")
+                    },
+                    "matching_details": {
+                        "sender_pattern": rule["sender"],
+                        "matched_subject_keywords": matched_subject_keywords,
+                        "matched_content_keywords": matched_content_keywords
+                    }
+                }
+                
+                extracted_commands.append(command)
         
         return extracted_commands
     
