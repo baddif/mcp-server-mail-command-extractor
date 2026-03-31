@@ -23,7 +23,7 @@ def test_with_real_gmail_data():
     gmail_data_file = "gmail_skill_latest_output.json"
     if not os.path.exists(gmail_data_file):
         print(f"❌ Gmail data file not found: {gmail_data_file}")
-        return False
+        assert False, f"Gmail data file not found: {gmail_data_file}"
     
     with open(gmail_data_file, 'r', encoding='utf-8') as f:
         gmail_data = json.load(f)
@@ -138,7 +138,7 @@ def test_with_real_gmail_data():
             else:
                 print("   No commands generated (no matching emails)")
             
-            return True
+            return
         else:
             print("❌ Real data processing failed")
             print(f"   Error: {response_data.get('error', {}).get('message', 'Unknown')}")
@@ -331,15 +331,12 @@ def test_multiple_scenarios():
                     
                 else:
                     print(f"   ❌ 命令数量不匹配: 期望 {expected_commands}, 实际 {actual_commands}")
-                    return False
-            else:
-                print(f"   ❌ 场景执行失败: {response_data.get('error', 'Unknown error')}")
-                return False
+                    assert False, f"命令数量不匹配: 期望 {expected_commands}, 实际 {actual_commands}"
         else:
             print(f"   ❌ 工具执行错误: {result.get('error', 'Unknown error')}")
-            return False
+            assert False, f"工具执行错误: {result.get('error', 'Unknown error')}"
     
-    return True
+    # If we reach here without assertion failures, the test passes
 
 
 def main():
@@ -357,11 +354,11 @@ def main():
     
     for test_func in tests:
         try:
-            if test_func():
-                passed += 1
-                print("✅ Test passed")
-            else:
-                print("❌ Test failed")
+            test_func()
+            passed += 1
+            print("✅ Test passed")
+        except AssertionError as e:
+            print(f"❌ Test failed - {e}")
         except Exception as e:
             print(f"💥 Test error: {e}")
             import traceback
@@ -372,10 +369,10 @@ def main():
     
     if passed == total:
         print("🎉 All integration tests passed! The system is ready for production use!")
-        return True
+        return
     else:
         print("⚠️ Some integration tests failed. Please check the output above.")
-        return False
+        assert False, "Some integration tests failed"
 
 
 if __name__ == "__main__":

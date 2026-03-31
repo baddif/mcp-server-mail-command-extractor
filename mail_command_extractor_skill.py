@@ -20,7 +20,7 @@ MCP Support:
 from typing import Any, Dict, List, Optional
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     from ldr.mcp.base import McpCompatibleSkill, McpResource
@@ -149,6 +149,61 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
     def get_openai_schema(self) -> Dict[str, Any]:
         """Return OpenAI Function Calling compatible JSON Schema"""
         return self.get_schema()
+
+    def _normalize_rules(self, detection_rules: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Normalize detection_rules into simplified internal format.
+
+        Supports legacy format where rules -> subjects -> {title_pattern, content_rules}
+        and modern simplified format where rule has 'subjects' and 'contents' arrays.
+        """
+        if not detection_rules:
+            return []
+
+        raw_rules = detection_rules.get("rules", [])
+        normalized = []
+
+        for rule in raw_rules:
+            sender = rule.get("sender", "")
+            priority = rule.get("priority", 100)
+            parameters = rule.get("parameters", {})
+            action = rule.get("action") or rule.get("action_name") or rule.get("command")
+
+            # Legacy: subjects is list of objects with title_pattern and content_rules
+            subjects_block = rule.get("subjects")
+            contents_block = rule.get("contents")
+
+            if subjects_block and len(subjects_block) > 0 and isinstance(subjects_block[0], dict):
+                # Expand each title/content rule into a normalized rule entry
+                for subject_obj in subjects_block:
+                    title = subject_obj.get("title_pattern") or subject_obj.get("title") or ""
+                    content_rules = subject_obj.get("content_rules", [])
+                    # content_rules may contain objects with content_pattern and action
+                    for content_rule in content_rules:
+                        content_pattern = content_rule.get("content_pattern")
+                        action_obj = content_rule.get("action", {})
+                        cmd = action_obj.get("command") or action or None
+                        params = action_obj.get("parameters", parameters)
+                        prio = action_obj.get("priority", priority)
+                        normalized.append({
+                            "sender": sender,
+                            "subjects": [title] if title else [],
+                            "contents": [content_pattern] if content_pattern else [],
+                            "action": cmd,
+                            "parameters": params,
+                            "priority": prio
+                        })
+            else:
+                # Modern simplified rule shape
+                normalized.append({
+                    "sender": sender,
+                    "subjects": subjects_block or [],
+                    "contents": contents_block or [],
+                    "action": action,
+                    "parameters": parameters,
+                    "priority": priority
+                })
+
+        return normalized
     
     def execute(self, ctx: ExecutionContext, **kwargs) -> Any:
         """
@@ -162,12 +217,19 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
             包含提取的命令列表的结果
         """
         try:
-            # 新的输入格式：直接接收邮件数组
-            emails = kwargs.get("emails", [])
+            # 支持两种输入格式（向后兼容）:
+            # 1) 新格式: emails (直接是matched_emails数组)
+            # 2) 旧格式: email_list: { matched_emails: [...] }
+            emails = kwargs.get("emails")
+            if emails is None:
+                email_list = kwargs.get("email_list", {}) or {}
+                emails = email_list.get("matched_emails", [])
+
             detection_rules = kwargs.get("detection_rules", {})
             merge_duplicates = kwargs.get("merge_duplicates", True)
             
-            rules = detection_rules.get("rules", [])
+            # Normalize rules to simplified format for internal processing
+            rules = self._normalize_rules(detection_rules)
             
             # 如果输入的邮件列表为空或者命令检测模板为空，则返回空命令列表
             if not emails or not rules:
@@ -179,7 +241,8 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                         "processed_emails": len(emails),
                         "matched_emails": 0,
                         "total_commands": 0,
-                        "processing_time": datetime.utcnow().isoformat() + "Z",
+                        # Use timezone-aware UTC timestamp
+                        "processing_time": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
                         "empty_input_reason": "Empty email list" if not emails else "Empty detection rules"
                     },
                     "statistics": {
@@ -205,7 +268,8 @@ class MailCommandExtractorSkill(McpCompatibleSkill):
                 "processed_emails": len(emails),
                 "matched_emails": len([cmd for cmd in extracted_commands if cmd.get("matched_emails", cmd.get("matched_email"))]),
                 "total_commands": len(extracted_commands),
-                "processing_time": datetime.utcnow().isoformat() + "Z"
+                # Use timezone-aware UTC timestamp
+                "processing_time": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
             }
             
             # 存储到上下文

@@ -115,7 +115,6 @@ def test_sender_email_exact_matching():
     assert matched_email["sender_email"] == "exact@test.com"
     
     print("✅ sender_email精确匹配测试通过")
-    return True
 
 def test_fallback_extraction():
     """测试从sender字段解析邮箱地址的降级功能"""
@@ -172,7 +171,6 @@ def test_fallback_extraction():
     assert command["command"] == "test_fallback"
     
     print("✅ 邮箱地址降级解析测试通过")
-    return True
 
 def test_with_real_gmail_data():
     """使用真实的Gmail数据测试"""
@@ -183,7 +181,8 @@ def test_with_real_gmail_data():
             gmail_data = json.load(f)
     except FileNotFoundError:
         print("⚠️ Gmail测试数据文件不存在，跳过此测试")
-        return True
+        # Skip the test by asserting True (so pytest reports it as passed)
+        return
     
     skill = MailCommandExtractorSkill()
     ctx = ExecutionContext()
@@ -238,8 +237,6 @@ def test_with_real_gmail_data():
             assert email['sender_email'] == 'jobalerts-noreply@linkedin.com'
         
         print("✅ LinkedIn邮件精确匹配验证通过")
-    
-    return True
 
 def main():
     """运行所有sender_email功能测试"""
@@ -257,8 +254,8 @@ def main():
     
     for test in tests:
         try:
-            if test():
-                passed += 1
+            test()
+            passed += 1
         except Exception as e:
             print(f"❌ 测试失败: {e}")
     
@@ -272,11 +269,10 @@ def main():
         print("- ✅ 缺失sender_email时自动从sender字段解析")
         print("- ✅ 精确匹配避免了意外的模糊匹配")
         print("- ✅ 与现有邮件数据格式兼容")
-        return True
     else:
         print("❌ 部分测试失败")
-        return False
+        assert False, "Some sender_email tests failed"
+
 
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    main()

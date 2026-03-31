@@ -17,14 +17,14 @@ def test_local_config():
         print("✅ 本地配置文件读取成功")
     except Exception as e:
         print(f"❌ 配置文件读取失败: {e}")
-        return False
+        assert False, f"配置文件读取失败: {e}"
     
     # 验证配置结构
     required_fields = ['detection_rules', 'email_list', 'merge_duplicates']
     for field in required_fields:
         if field not in config:
             print(f"❌ 缺少必需字段: {field}")
-            return False
+            assert False, f"缺少必需字段: {field}"
     
     print("✅ 配置文件结构验证通过")
     
@@ -35,7 +35,7 @@ def test_local_config():
         for field in required_email_fields:
             if field not in email:
                 print(f"❌ 邮件 {i+1} 缺少字段: {field}")
-                return False
+                assert False, f"邮件 {i+1} 缺少字段: {field}"
     
     print(f"✅ {len(emails)} 封邮件数据格式验证通过")
     
@@ -50,7 +50,7 @@ def test_local_config():
         print(f"❌ 执行出错: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"执行出错: {e}"
     
     # 显示结果
     print(f"📊 执行结果: {result['success']}")
@@ -77,19 +77,18 @@ def test_local_config():
                     print(f"  - 发件人: {email['sender_email']}")
                     print(f"  - 主题: {email['subject']}")
                     
-            return True
+            return
         else:
             print("⚠️ 没有生成任何命令")
-            return False
+            assert False, "没有生成任何命令"
     else:
         print(f"❌ 执行失败: {result['error']['message']}")
-        return False
-
+        assert False, f"执行失败: {result['error']['message']}"
 if __name__ == "__main__":
-    success = test_local_config()
-    if success:
+    # Allow running as a script
+    try:
+        test_local_config()
         print("\n✅ 本地配置文件调用测试成功！")
-        sys.exit(0)
-    else:
-        print("\n❌ 本地配置文件调用测试失败！")
+    except AssertionError as e:
+        print(f"\n❌ 本地配置文件调用测试失败: {e}")
         sys.exit(1)

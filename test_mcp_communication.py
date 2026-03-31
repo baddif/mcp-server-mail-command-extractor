@@ -49,50 +49,26 @@ def test_mcp_server_startup():
         response_line = process.stdout.readline()
         if response_line:
             response = json.loads(response_line.strip())
-            print("✅ 收到初始化响应")
-            
             # MCP响应直接包含结果字段，不在"result"包装器中
-            if "serverInfo" in response:
-                server_info = response["serverInfo"]
-                print(f"   协议版本: {response.get('protocolVersion', 'Unknown')}")
-                print(f"   服务器名称: {server_info.get('name', 'Unknown')}")
-                print(f"   服务器版本: {server_info.get('version', 'Unknown')}")
-                
-                # 测试工具列表请求
-                tools_request = {
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/list"
-                }
-                
-                print("发送工具列表请求...")
-                process.stdin.write(json.dumps(tools_request) + "\n")
-                process.stdin.flush()
-                
-                tools_response_line = process.stdout.readline()
-                if tools_response_line:
-                    tools_response = json.loads(tools_response_line.strip())
-                    # MCP工具列表响应格式
-                    if "tools" in tools_response:
-                        tools = tools_response["tools"]
-                        print(f"✅ 工具列表获取成功，发现 {len(tools)} 个工具")
-                        for tool in tools:
-                            print(f"   - {tool.get('name', 'Unknown')}")
-                        return True
-                    else:
-                        print("❌ 工具列表请求失败")
-                        print(f"响应内容: {tools_response}")
-                        return False
-                else:
-                    print("❌ 工具列表响应超时")
-                    return False
-            else:
-                print("❌ 初始化响应格式错误")
-                print(f"响应内容: {response}")
-                return False
-        else:
-            print("❌ 初始化响应超时")
-            return False
+            assert "serverInfo" in response, f"初始化响应格式错误: {response}"
+            server_info = response["serverInfo"]
+            # 测试工具列表请求
+            tools_request = {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/list"
+            }
+
+            process.stdin.write(json.dumps(tools_request) + "\n")
+            process.stdin.flush()
+
+            tools_response_line = process.stdout.readline()
+            assert tools_response_line, "工具列表响应超时"
+            tools_response = json.loads(tools_response_line.strip())
+            assert "tools" in tools_response, f"工具列表请求失败: {tools_response}"
+            tools = tools_response["tools"]
+            assert isinstance(tools, list), "工具列表格式错误"
+            return
     
     except Exception as e:
         print(f"❌ 测试过程中出错: {e}")
@@ -133,9 +109,7 @@ def test_mcp_server_tool_call():
         process.stdin.flush()
         init_response = process.stdout.readline()
         
-        if not init_response:
-            print("❌ 初始化失败")
-            return False
+        assert init_response, "初始化失败"
         
         # 工具调用
         tool_request = {
@@ -189,26 +163,15 @@ def test_mcp_server_tool_call():
         if tool_response_line:
             tool_response = json.loads(tool_response_line.strip())
             # MCP工具调用响应格式检查
-            if "content" in tool_response:
-                print("✅ 工具调用成功")
-                # 解析工具响应内容
-                content = tool_response["content"][0]["text"]
-                result_data = json.loads(content)
-                if result_data.get("success"):
-                    commands = result_data["data"]["extracted_commands"]
-                    print(f"   生成命令数量: {len(commands)}")
-                    return True
-                else:
-                    print("   工具执行失败")
-                    print(f"   错误: {result_data.get('error', 'Unknown')}")
-                    return False
-            else:
-                print("❌ 工具调用失败")
-                print(f"响应内容: {tool_response}")
-                return False
+            assert "content" in tool_response, f"工具调用失败: {tool_response}"
+            content = tool_response["content"][0]["text"]
+            result_data = json.loads(content)
+            assert result_data.get("success"), f"工具执行失败: {result_data.get('error')}"
+            commands = result_data["data"]["extracted_commands"]
+            assert isinstance(commands, list)
+            return
         else:
-            print("❌ 工具调用响应超时")
-            return False
+            assert False, "工具调用响应超时"
     
     except Exception as e:
         print(f"❌ 工具调用测试出错: {e}")
@@ -248,13 +211,7 @@ def main():
     
     print("\n" + "=" * 50)
     print(f"Communication Test Results: {passed}/{total} tests passed")
-    
-    if passed == total:
-        print("🎉 MCP Server communication is working perfectly!")
-        return True
-    else:
-        print("⚠️ Some communication tests failed.")
-        return False
+    assert passed == total, "Some communication tests failed"
 
 
 if __name__ == "__main__":
